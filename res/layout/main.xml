@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+<FrameLayout
+	android:id="@+id/videoview" 
+	android:layout_width="720px"
+	android:layout_height="480px">
+</FrameLayout>
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+<Button
+	android:id="@+id/chcambtn" 
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content"
+	android:text="0"
+	android:textSize="12sp"/>
+<Button
+	android:id="@+id/mybutton" 
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content"
+	android:text="REC"
+	android:textSize="12sp"/>
+<Button
+   android:id="@+id/takebutton"
+   android:layout_width="fill_parent"
+   android:layout_height="wrap_content"
+   android:text="Take(local)"
+   />
+<Button
+   android:id="@+id/socket"
+   android:layout_width="fill_parent"
+   android:layout_height="wrap_content"
+   android:text="Take(net)"
+   />
+<Button
+   android:id="@+id/auto"
+   android:layout_width="fill_parent"
+   android:layout_height="wrap_content"
+   android:text="auto Take(net)"
+   />
+</LinearLayout>
+</LinearLayout>
