@@ -31,7 +31,7 @@ public class ByteBody implements AsyncHttpRequestBody<String> {
         });
     }
 
-    public static final String CONTENT_TYPE = "text/plain";
+    public static final String CONTENT_TYPE = "application/octet-stream";
 
     @Override
     public void write(AsyncHttpRequest request, DataSink sink, final CompletedCallback completed) {
@@ -40,7 +40,7 @@ public class ByteBody implements AsyncHttpRequestBody<String> {
 
     @Override
     public String getContentType() {
-        return "text/plain";
+        return "application/octet-stream";
     }
 
     @Override

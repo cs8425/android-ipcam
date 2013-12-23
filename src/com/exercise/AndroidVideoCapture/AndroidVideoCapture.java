@@ -1,10 +1,12 @@
 package com.exercise.AndroidVideoCapture;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -13,7 +15,10 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PictureCallback;
@@ -30,7 +35,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
-import com.koushikdutta.async.*;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpPost;
 import com.koushikdutta.async.http.AsyncHttpResponse;
@@ -56,32 +60,33 @@ public class AndroidVideoCapture extends Activity{
 	Button netButton;
 	Button autonetButton;
 	SurfaceHolder surfaceHolder;
-	boolean recording;
+	//boolean recording;
 	boolean Pictureing;
 	boolean autoing;
 	int camid = 0;
+	String server_url = "";
 	
-	private Handler handler_1 = null;//老闆
-	private HandlerThread handlerThread_1 = null;//員工
-	private String handlerThread_1_name = "autotake";
+	/*private Handler handler_1 = null;
+	private HandlerThread handlerThread_1 = null;
+	private String handlerThread_1_name = "autotake";*/
 	
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        recording = false;
+        //recording = false;
         Pictureing = false;
         autoing = false;
         
         setContentView(R.layout.main);
         
-        myButton = (Button)findViewById(R.id.mybutton);
-        myButton.setOnClickListener(myButtonOnClickListener);
+        /*myButton = (Button)findViewById(R.id.mybutton);
+        myButton.setOnClickListener(myButtonOnClickListener);*/
         
         chButton = (Button)findViewById(R.id.chcambtn);
         
-        camid = Camera.getNumberOfCameras()-1;
+        //camid = Camera.getNumberOfCameras()-1;
         chButton.setText(""+camid);
         chButton.setOnClickListener(chButtonOnClickListener);
         
@@ -109,8 +114,7 @@ public class AndroidVideoCapture extends Activity{
         
     }
     
-    Button.OnClickListener myButtonOnClickListener
-    = new Button.OnClickListener(){
+    /*Button.OnClickListener myButtonOnClickListener = new Button.OnClickListener(){
 		@Override
 		public void onClick(View v) {
 			// TODO Auto-generated method stub
@@ -138,23 +142,37 @@ public class AndroidVideoCapture extends Activity{
 				recording = true;
 				myButton.setText("STOP");
 			}
-		}};
-    Button.OnClickListener autoButtonOnClickListener
-	    = new Button.OnClickListener(){
+		}};*/
+    Button.OnClickListener autoButtonOnClickListener = new Button.OnClickListener(){
 			@Override
 			public void onClick(View v) {
 				if(autoing){
 					autonetButton.setText("auto Take(net)");
 					autoing = false;
 				}else{
-			        handlerThread_1 = new HandlerThread(handlerThread_1_name);
-				    handlerThread_1.start();
-				    handler_1 = new Handler(handlerThread_1.getLooper());
-				    handler_1.post(runnable_1);
+			        //handlerThread_1 = new HandlerThread(handlerThread_1_name);
+				    //handlerThread_1.start();
+				    //handler_1 = new Handler(handlerThread_1.getLooper());
+				    //handler_1.post(runnable_1);
 					autonetButton.setText("STOP");
 					autoing = true;
+					try{
+			    		Parameters parameters = myCamera.getParameters();
+			    		parameters.set("jpeg-quality", 60);
+			    		parameters.setPictureFormat(PixelFormat.JPEG);
+			    		List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
+			    		Size size = sizes.get(0);
+			    		parameters.setPictureSize(size.width, size.height);
+			    		parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
+			    		myCamera.setParameters(parameters);
+					}
+					catch(Exception e){
+						e.printStackTrace();
+					}
+					myCamera.setPreviewCallback(previewCallback);
 				}
-			}};
+	}};
+
     Button.OnClickListener chButtonOnClickListener = new Button.OnClickListener(){
 			@Override
 			public void onClick(View v) {
@@ -216,14 +234,19 @@ public class AndroidVideoCapture extends Activity{
         public void onClick(View v) {
     		if(!Pictureing){
 	    		Pictureing = true;
-	    		Parameters parameters = myCamera.getParameters();
-	    		parameters.set("jpeg-quality", 90);
-	    		parameters.setPictureFormat(PixelFormat.JPEG);
-	    		List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
-	    		Size size = sizes.get(0);
-	    		parameters.setPictureSize(size.width, size.height);
-	    		parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
-	    		myCamera.setParameters(parameters);
+				try{
+		    		Parameters parameters = myCamera.getParameters();
+		    		parameters.set("jpeg-quality", 60);
+		    		parameters.setPictureFormat(PixelFormat.JPEG);
+		    		List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
+		    		Size size = sizes.get(0);
+		    		parameters.setPictureSize(size.width, size.height);
+		    		parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
+		    		myCamera.setParameters(parameters);
+				}
+				catch(Exception e){
+					e.printStackTrace();
+				}
 	    		myCamera.takePicture(null, null, netPicture);
     		}
         }
@@ -232,15 +255,16 @@ public class AndroidVideoCapture extends Activity{
 	    @Override
 	    public void onPictureTaken(byte[] data, Camera camera) {
 	    	try {
-	            AsyncHttpPost post = new AsyncHttpPost("http://192.168.1.96:5100");
+	            AsyncHttpPost post = new AsyncHttpPost("http://134.208.0.206:5900/data");
+	    		//AsyncHttpPost post = new AsyncHttpPost("http://192.168.1.96:2000/data");
 	            ByteBody ok = new ByteBody(data);
 	            post.setBody(ok);
 	            AsyncHttpClient.getDefaultInstance().execute(post, new HttpConnectCallback() {
 					@Override
-					public void onConnectCompleted(Exception ae,
+					public void onConnectCompleted(Exception e,
 							AsyncHttpResponse response) {
 						// TODO Auto-generated method stub
-						
+						//Toast.makeText(AndroidVideoCapture.this, "send.",Toast.LENGTH_LONG).show();
 					}
 	            });
 	        }
@@ -251,7 +275,8 @@ public class AndroidVideoCapture extends Activity{
 	    	Pictureing = false;
 	    }
 	};
-	private Runnable runnable_1 = new Runnable() {
+	
+	/*private Runnable runnable_1 = new Runnable() {
 		@Override
 		public void run() {
 			if(autoing){
@@ -265,9 +290,47 @@ public class AndroidVideoCapture extends Activity{
 		    		myCamera.takePicture(null, null, netPicture);
 	    		}
 			}
-		    handler_1.postDelayed(this, 40);
+		    handler_1.postDelayed(this, 10);
 		}
-	};
+	};*/
+	
+	Camera.PreviewCallback previewCallback = new Camera.PreviewCallback()  
+    {
+            public void onPreviewFrame(byte[] data, Camera camera)  
+            {
+            	if(autoing){
+                    try 
+                    {
+                    	Camera.Parameters parameters = camera.getParameters();
+                        Size size = parameters.getPreviewSize();
+                        YuvImage image = new YuvImage(data, ImageFormat.NV21,
+                                size.width, size.height, null);
+                        Rect rectangle = new Rect();
+                        rectangle.bottom = size.height;
+                        rectangle.top = 0;
+                        rectangle.left = 0;
+                        rectangle.right = size.width;
+                        ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+                        image.compressToJpeg(rectangle, 60, out2);
+
+        	            AsyncHttpPost post = new AsyncHttpPost("http://134.208.0.206:5900/data");
+        	            ByteBody ok = new ByteBody(out2.toByteArray());
+        	            post.setBody(ok);
+        	            AsyncHttpClient.getDefaultInstance().execute(post, new HttpConnectCallback() {
+        					@Override
+        					public void onConnectCompleted(Exception e,
+        							AsyncHttpResponse response) {
+        						//Toast.makeText(AndroidVideoCapture.this, "send.",Toast.LENGTH_LONG).show();
+        					}
+        	            });
+                    }
+                    catch(Exception ex)
+                    {
+                    	ex.printStackTrace();
+                    }
+            	}
+            }
+    }; 
 	
     private Camera getCameraInstance(){
 		// TODO Auto-generated method stub
@@ -275,6 +338,7 @@ public class AndroidVideoCapture extends Activity{
         try {
             //c = Camera.open(Camera.getNumberOfCameras()-1); // attempt to get a Camera instance
         	c = Camera.open(camid);
+        	//c.setPreviewCallback(previewCallback);
         }
         catch (Exception e){
             // Camera is not available (in use or does not exist)
@@ -282,7 +346,8 @@ public class AndroidVideoCapture extends Activity{
         return c; // returns null if camera is unavailable
 	}
 	
-	private boolean prepareMediaRecorder(){
+    // not work
+	/*private boolean prepareMediaRecorder(){
 	    myCamera = getCameraInstance();
 	    mediaRecorder = new MediaRecorder();
 
@@ -317,26 +382,28 @@ public class AndroidVideoCapture extends Activity{
 	    }
 	    return true;
 
-	}
+	}*/
 	
     @Override
     protected void onPause() {
         super.onPause();
-        releaseMediaRecorder();       // if you are using MediaRecorder, release it first
+        //releaseMediaRecorder();       // if you are using MediaRecorder, release it first
         releaseCamera();              // release the camera immediately on pause event
+        autoing = false;
     }
 
-    private void releaseMediaRecorder(){
+    /*private void releaseMediaRecorder(){
         if (mediaRecorder != null) {
             mediaRecorder.reset();   // clear recorder configuration
             mediaRecorder.release(); // release the recorder object
             mediaRecorder = null;
             myCamera.lock();           // lock camera for later use
         }
-    }
+    }*/
 
     private void releaseCamera(){
         if (myCamera != null){
+        	myCamera.stopPreview();
             myCamera.release();        // release the camera for other applications
             myCamera = null;
         }
@@ -382,7 +449,7 @@ public class AndroidVideoCapture extends Activity{
 	        // start preview with new settings
 	        try {
 	            mCamera.setPreviewDisplay(mHolder);
-	            //mCamera.setPreviewCallbackWithBuffer(cb);
+	            //mCamera.setPreviewCallback(previewCallback);
 	            mCamera.startPreview();
 
 	        } catch (Exception e){
@@ -395,6 +462,7 @@ public class AndroidVideoCapture extends Activity{
 			// The Surface has been created, now tell the camera where to draw the preview.
 	        try {
 	            mCamera.setPreviewDisplay(holder);
+	            //mCamera.setPreviewCallback(previewCallback);
 	            mCamera.startPreview();
 	        } catch (IOException e) {
 	        }

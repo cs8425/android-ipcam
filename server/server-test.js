@@ -25,20 +25,42 @@ console.log("Welcome " + socket.name);
 };
 
 // Start a TCP Server
-net.createServer(server).listen(5100);
+net.createServer(server).listen(2000);
 
 // Put a friendly message on the terminal of the server.
 console.log("server running at port 5100\n");*/
+
 var frames = [];
+var deltas = [];
 var BOUNDARY = '----' + Math.random().toString(16).substring(2);
+var black = fs.readFileSync('black.jpg');
+var qt;
 
 http.createServer(function (req, res) {
 	// set up some routes
 	switch(req.url) {
+		case '/data':
 		case '/':
 			if (req.method == 'POST') {
+				console.time('data in');
 				console.log("[200] " + req.method + " to " + req.url);
 				var bufs = [];
+				if(qt){
+					var now = new Date();
+					var delta = now.getTime() - qt.getTime();
+					if(delta < 100){
+						deltas.push(delta);
+						console.log("frame delta: " + delta);
+					}else{
+						deltas.push(0);
+					}
+					//delete qt;
+					delete now;
+					delete delta;
+				}else{
+					deltas.push(0);
+//console.log(req);
+				}
 				//var file = fs.createWriteStream('test');
 				req.on('data', function(chunk) {
 					//console.log("Received body data...");
@@ -49,15 +71,20 @@ http.createServer(function (req, res) {
 				req.on('end', function() {
 					res.writeHead(200, "OK", {'Content-Type': 'text/html'});
 					res.end("ok!");
-					console.log("Received body end");
 					//file.end();
+
+					qt = new Date();
+
 					var buf = Buffer.concat(bufs);
 					frames.push(buf);
+					console.log("Received body end: " + buf.length);
 					delete bufs;
+
 					/*fs.writeFile('test-string', buf, function (err) {
 						if (err) throw err;
 						console.log('It\'s saved!');
 					});*/
+					console.timeEnd('data in');
 				});
 			}else{
 				console.log("[501] " + req.method + " to " + req.url);
@@ -66,8 +93,10 @@ http.createServer(function (req, res) {
 			}
 		break;
 		case '/gg.jpg':
+		case '/gg.mjpeg':
 				res.writeHead(200, {'Content-Type': "multipart/x-mixed-replace; boundary="+BOUNDARY});
-				setInterval(function () {
+				var isBlack = 0;
+				/*var push = setInterval(function () {
 					//var date = new Date();
 					//res.write(date.toString() + '\r\n\r\n', 'ascii');
 					if(frames.length){
@@ -78,27 +107,85 @@ http.createServer(function (req, res) {
 						res.write(frames[0]);
 						//frames.splice(0, 1);
 						res.write('\r\n\r\n', 'ascii');
-					}/*else{
+						isBlack = 0;
+					}else{
+						if(isBlack == 0){
+							res.write(BOUNDARY+'\r\n', 'ascii');
+							res.write('Content-Type: image/jpeg\r\n', 'ascii');
+							res.write('Content-length: ' + black.length + '\r\n', 'ascii');
+							res.write('\r\n', 'ascii');
+							res.write(black);
+							res.write('\r\n\r\n', 'ascii');
+							isBlack = 1;
+						}
+					}
+				}, 100);*/
+				/*req.on('close', function() {
+					clearInterval(push);
+					console.log("req end.");
+				});*/
+				var keep;
+				var go = function(){
+					if(frames.length){
 						res.write(BOUNDARY+'\r\n', 'ascii');
 						res.write('Content-Type: image/jpeg\r\n', 'ascii');
 						res.write('Content-length: ' + frames[0].length + '\r\n', 'ascii');
 						res.write('\r\n', 'ascii');
 						res.write(frames[0]);
 						res.write('\r\n\r\n', 'ascii');
-					}*/
-				}, 10);
+						//isBlack = 0;
+					}else{
+						if(isBlack == 0){
+							res.write(BOUNDARY+'\r\n', 'ascii');
+							res.write('Content-Type: image/jpeg\r\n', 'ascii');
+							res.write('Content-length: ' + black.length + '\r\n', 'ascii');
+							res.write('\r\n', 'ascii');
+							res.write(black);
+							res.write('\r\n\r\n', 'ascii');
+							isBlack = 1;
+						}
+					}
+					//console.log("push...");
+					keep = setTimeout(go, 100);
+				}
+				go();
+				req.on('close', function() {
+					clearTimeout(keep);
+					delete go;
+					delete keep;
+					console.log("req end.");
+				});
+
+		break;
+		case '/show':
+			console.log("[200] " + req.method + " to " + req.url);
+			res.writeHead(200, "OK", {'Content-Type': 'text/html'});
+			res.end('<html><head><title>ipcam</title></head><body><img src="/gg.mjpeg"></body></html>');
 		break;
 		default:
 			res.writeHead(404, "Not found", {'Content-Type': 'text/html'});
 			res.end('<html><head><title>404 - Not found</title></head><body><h1>Not found.</h1></body></html>');
 			console.log("[404] " + req.method + " to " + req.url);
 	};
-}).listen(5100);
+}).listen(5900);
 
-setInterval(function () {
+/*setInterval(function () {
+	if(frames.length>1){
+		frames.splice(0, 1);
+	}
+}, 100);*/
+var popout = function(){
+	var delta = deltas.pop();
 	if(frames.length){
 		frames.splice(0, 1);
 	}
-}, 40);
+	if(delta){
+		setTimeout(popout, delta);
+	}else{
+		setTimeout(popout, 10);
+	}
+	delete delta;
+}
+popout();
 
 
