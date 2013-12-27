@@ -25,7 +25,7 @@
 	android:id="@+id/mybutton" 
 	android:layout_width="fill_parent"
 	android:layout_height="wrap_content"
-	android:text="REC"
+	android:text="long-poll"
 	android:textSize="12sp"/>
 <Button
    android:id="@+id/takebutton"

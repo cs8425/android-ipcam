@@ -1,0 +1,19 @@
+Android app:
+	MJPG:
+		http://ben-collins.blogspot.tw/2010/06/php-sending-motion-jpeg.html
+		https://github.com/donatj/mjpeg-php/blob/master/mjpeg.php
+
+	HTTP client:
+		https://github.com/koush/AndroidAsync
+
+	Camera:
+		http://developer.android.com/guide/topics/media/camera.html
+		http://android-er.blogspot.tw/2011/10/simple-exercise-of-video-capture-using.html
+
+	Camera.PreviewCallback:
+		http://stackoverflow.com/questions/3376672/how-to-capture-preview-image-frames-from-camera-application-in-android-programmi
+
+Server:
+	http://nodejs.org/api/
+
+

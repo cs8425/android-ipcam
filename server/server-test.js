@@ -35,6 +35,8 @@ var deltas = [];
 var BOUNDARY = '----' + Math.random().toString(16).substring(2);
 var black = fs.readFileSync('black.jpg');
 var qt;
+var pull_list = [];
+var ON = false;
 
 http.createServer(function (req, res) {
 	// set up some routes
@@ -161,6 +163,47 @@ http.createServer(function (req, res) {
 			console.log("[200] " + req.method + " to " + req.url);
 			res.writeHead(200, "OK", {'Content-Type': 'text/html'});
 			res.end('<html><head><title>ipcam</title></head><body><img src="/gg.mjpeg"></body></html>');
+		break;
+		case '/poll':
+			console.log("[200] " + req.method + " to " + req.url);
+			res.writeHead(200, "OK", {'Content-Type': 'text/html'});
+			var go = function(){
+				if(ON){
+					res.end('ON');
+				}else{
+					res.end('OFF');
+				}
+				console.log("push...");
+			}
+			pull_list.push({'res': res, 'ref': setTimeout(go, 15000)});
+			delete go;
+		break;
+		case '/set/ON':
+			console.log("[200] " + req.method + " to " + req.url);
+			res.writeHead(200, "OK", {'Content-Type': 'text/html'});
+			res.end('set ON');
+			ON = true;
+			pull_list.forEach(function(element, index, array) {
+				clearTimeout(element.ref);
+				element.res.end('ON');
+			});
+			pull_list = [];
+			console.log("set ON...");
+		break;
+		case '/set/OFF':
+			console.log("[200] " + req.method + " to " + req.url);
+			res.writeHead(200, "OK", {'Content-Type': 'text/html'});
+			res.end('set OFF');
+			ON = false;
+			pull_list.forEach(function(element, index, array) {
+				clearTimeout(element.ref);
+				element.res.end('OFF');
+			});
+			pull_list = [];
+			frames = [];
+			deltas = [];
+			qt = null;
+			console.log("set OFF...");
 		break;
 		default:
 			res.writeHead(404, "Not found", {'Content-Type': 'text/html'});

@@ -52,37 +52,36 @@ public class AndroidVideoCapture extends Activity{
 	
 	private Camera myCamera;
     private MyCameraSurfaceView myCameraSurfaceView;
-    private MediaRecorder mediaRecorder;
+    //private MediaRecorder mediaRecorder;
 
-	Button myButton;
+	Button pollButton;
 	Button chButton;
 	Button takeButton;
 	Button netButton;
 	Button autonetButton;
 	SurfaceHolder surfaceHolder;
-	//boolean recording;
+	boolean record;
+	boolean poll;
 	boolean Pictureing;
 	boolean autoing;
 	int camid = 0;
 	String server_url = "";
-	
-	/*private Handler handler_1 = null;
-	private HandlerThread handlerThread_1 = null;
-	private String handlerThread_1_name = "autotake";*/
+
 	
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        //recording = false;
+        record = false;
+        poll = false;
         Pictureing = false;
         autoing = false;
         
         setContentView(R.layout.main);
         
-        /*myButton = (Button)findViewById(R.id.mybutton);
-        myButton.setOnClickListener(myButtonOnClickListener);*/
+        pollButton = (Button)findViewById(R.id.mybutton);
+        pollButton.setOnClickListener(pollButtonOnClickListener);
         
         chButton = (Button)findViewById(R.id.chcambtn);
         
@@ -114,35 +113,34 @@ public class AndroidVideoCapture extends Activity{
         
     }
     
-    /*Button.OnClickListener myButtonOnClickListener = new Button.OnClickListener(){
+    Button.OnClickListener pollButtonOnClickListener = new Button.OnClickListener(){
 		@Override
 		public void onClick(View v) {
-			// TODO Auto-generated method stub
-			if(recording){
-                // stop recording and release camera
-                mediaRecorder.stop();  // stop the recording
-                releaseMediaRecorder(); // release the MediaRecorder object
-                
-                //Exit after saved
-                finish();
+			if(poll){
+				poll = false;
+				pollButton.setText("long-poll");
 			}else{
-				
-				//Release Camera before MediaRecorder start
-		        myCamera.stopPreview();
-				releaseCamera();
-				
-		        if(!prepareMediaRecorder()){
-		        	Toast.makeText(AndroidVideoCapture.this, 
-		        			"Fail in prepareMediaRecorder()!\n - Ended -", 
-		        			Toast.LENGTH_LONG).show();
-		        	finish();
-		        }
-
-				mediaRecorder.start();
-				recording = true;
-				myButton.setText("STOP");
+				poll = true;
+				pollButton.setText("STOP");
+				longpoll();
+				try{
+		    		Parameters parameters = myCamera.getParameters();
+		    		parameters.set("jpeg-quality", 60);
+		    		parameters.setPictureFormat(PixelFormat.JPEG);
+		    		List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
+		    		Size size = sizes.get(0);
+		    		parameters.setPictureSize(size.width, size.height);
+		    		parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_INFINITY);
+		    		myCamera.setParameters(parameters);
+				}
+				catch(Exception ex){
+					ex.printStackTrace();
+				}
+				myCamera.setPreviewCallback(previewCallback);
+				Toast.makeText(AndroidVideoCapture.this, "long-polling start",Toast.LENGTH_LONG).show();
 			}
-		}};*/
+
+		}};
     Button.OnClickListener autoButtonOnClickListener = new Button.OnClickListener(){
 			@Override
 			public void onClick(View v) {
@@ -150,10 +148,6 @@ public class AndroidVideoCapture extends Activity{
 					autonetButton.setText("auto Take(net)");
 					autoing = false;
 				}else{
-			        //handlerThread_1 = new HandlerThread(handlerThread_1_name);
-				    //handlerThread_1.start();
-				    //handler_1 = new Handler(handlerThread_1.getLooper());
-				    //handler_1.post(runnable_1);
 					autonetButton.setText("STOP");
 					autoing = true;
 					try{
@@ -191,7 +185,6 @@ public class AndroidVideoCapture extends Activity{
 					myCamera.setPreviewDisplay(myCameraSurfaceView.getHolder());
 		            myCamera.startPreview();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -263,7 +256,6 @@ public class AndroidVideoCapture extends Activity{
 					@Override
 					public void onConnectCompleted(Exception e,
 							AsyncHttpResponse response) {
-						// TODO Auto-generated method stub
 						//Toast.makeText(AndroidVideoCapture.this, "send.",Toast.LENGTH_LONG).show();
 					}
 	            });
@@ -276,35 +268,16 @@ public class AndroidVideoCapture extends Activity{
 	    }
 	};
 	
-	/*private Runnable runnable_1 = new Runnable() {
-		@Override
-		public void run() {
-			if(autoing){
-	    		if(!Pictureing){
-		    		Pictureing = true;
-		    		Parameters parameters = myCamera.getParameters();
-		    		parameters.set("jpeg-quality", 90);
-		    		parameters.setPictureFormat(PixelFormat.JPEG);
-		    		parameters.setPictureSize(640, 480);
-		    		myCamera.setParameters(parameters);
-		    		myCamera.takePicture(null, null, netPicture);
-	    		}
-			}
-		    handler_1.postDelayed(this, 10);
-		}
-	};*/
-	
 	Camera.PreviewCallback previewCallback = new Camera.PreviewCallback()  
     {
             public void onPreviewFrame(byte[] data, Camera camera)  
             {
-            	if(autoing){
+            	if(autoing || record){
                     try 
                     {
                     	Camera.Parameters parameters = camera.getParameters();
                         Size size = parameters.getPreviewSize();
-                        YuvImage image = new YuvImage(data, ImageFormat.NV21,
-                                size.width, size.height, null);
+                        YuvImage image = new YuvImage(data, ImageFormat.NV21, size.width, size.height, null);
                         Rect rectangle = new Rect();
                         rectangle.bottom = size.height;
                         rectangle.top = 0;
@@ -331,9 +304,32 @@ public class AndroidVideoCapture extends Activity{
             	}
             }
     }; 
-	
+	private void longpoll(){
+		if(poll){
+	        AsyncHttpClient.getDefaultInstance().getString("http://134.208.0.206:5900/poll", new AsyncHttpClient.StringCallback(){
+				@Override
+				public void onCompleted(Exception e, AsyncHttpResponse response, String result) {
+					if (e != null) {
+			            e.printStackTrace();
+			            Toast.makeText(AndroidVideoCapture.this, "err",Toast.LENGTH_LONG).show();
+				        longpoll();
+			            return;
+			        }
+			        System.out.println("I got a string: " + result);
+					if(result.equals("ON")){
+						record = true;
+					}else{
+						if(result.equals("OFF")){
+							record = false;
+						}
+					}
+					Toast.makeText(AndroidVideoCapture.this, result,Toast.LENGTH_LONG).show();
+			        longpoll();
+				}
+	        });
+		}
+	}
     private Camera getCameraInstance(){
-		// TODO Auto-generated method stub
         Camera c = null;
         try {
             //c = Camera.open(Camera.getNumberOfCameras()-1); // attempt to get a Camera instance
