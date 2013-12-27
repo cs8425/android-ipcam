@@ -2,34 +2,6 @@ var net = require('net');
 var fs = require('fs');
 var http = require('http');
 
-/*
-var server = function (socket) {
-	socket.name = socket.remoteAddress + ":" + socket.remotePort;
-
-console.log("Welcome " + socket.name);
-
-	socket.on('data', function (data) {
-		console.log(data+"");
-	});
-
-
-	socket.on('end', function () {
-		console.log(socket.name + " left.(end)");
-	});
-	socket.on('error', function () {
-		console.log(socket.name + " left.(err)\n");
-	});
-	socket.on('close', function () {
-		console.log(socket.name + " left.(close)\n");
-	});
-};
-
-// Start a TCP Server
-net.createServer(server).listen(2000);
-
-// Put a friendly message on the terminal of the server.
-console.log("server running at port 5100\n");*/
-
 var frames = [];
 var deltas = [];
 var BOUNDARY = '----' + Math.random().toString(16).substring(2);
@@ -39,7 +11,6 @@ var pull_list = [];
 var ON = false;
 
 http.createServer(function (req, res) {
-	// set up some routes
 	switch(req.url) {
 		case '/data':
 		case '/':
@@ -56,24 +27,17 @@ http.createServer(function (req, res) {
 					}else{
 						deltas.push(0);
 					}
-					//delete qt;
 					delete now;
 					delete delta;
 				}else{
 					deltas.push(0);
-//console.log(req);
 				}
-				//var file = fs.createWriteStream('test');
 				req.on('data', function(chunk) {
-					//console.log("Received body data...");
-					//console.log(chunk.toString());
 					bufs.push(chunk);
-					//file.write(chunk);
 				});
 				req.on('end', function() {
 					res.writeHead(200, "OK", {'Content-Type': 'text/html'});
 					res.end("ok!");
-					//file.end();
 
 					qt = new Date();
 
@@ -82,10 +46,6 @@ http.createServer(function (req, res) {
 					console.log("Received body end: " + buf.length);
 					delete bufs;
 
-					/*fs.writeFile('test-string', buf, function (err) {
-						if (err) throw err;
-						console.log('It\'s saved!');
-					});*/
 					console.timeEnd('data in');
 				});
 			}else{
@@ -98,34 +58,6 @@ http.createServer(function (req, res) {
 		case '/gg.mjpeg':
 				res.writeHead(200, {'Content-Type': "multipart/x-mixed-replace; boundary="+BOUNDARY});
 				var isBlack = 0;
-				/*var push = setInterval(function () {
-					//var date = new Date();
-					//res.write(date.toString() + '\r\n\r\n', 'ascii');
-					if(frames.length){
-						res.write(BOUNDARY+'\r\n', 'ascii');
-						res.write('Content-Type: image/jpeg\r\n', 'ascii');
-						res.write('Content-length: ' + frames[0].length + '\r\n', 'ascii');
-						res.write('\r\n', 'ascii');
-						res.write(frames[0]);
-						//frames.splice(0, 1);
-						res.write('\r\n\r\n', 'ascii');
-						isBlack = 0;
-					}else{
-						if(isBlack == 0){
-							res.write(BOUNDARY+'\r\n', 'ascii');
-							res.write('Content-Type: image/jpeg\r\n', 'ascii');
-							res.write('Content-length: ' + black.length + '\r\n', 'ascii');
-							res.write('\r\n', 'ascii');
-							res.write(black);
-							res.write('\r\n\r\n', 'ascii');
-							isBlack = 1;
-						}
-					}
-				}, 100);*/
-				/*req.on('close', function() {
-					clearInterval(push);
-					console.log("req end.");
-				});*/
 				var keep;
 				var go = function(){
 					if(frames.length){
@@ -147,7 +79,6 @@ http.createServer(function (req, res) {
 							isBlack = 1;
 						}
 					}
-					//console.log("push...");
 					keep = setTimeout(go, 100);
 				}
 				go();
@@ -212,11 +143,6 @@ http.createServer(function (req, res) {
 	};
 }).listen(5900);
 
-/*setInterval(function () {
-	if(frames.length>1){
-		frames.splice(0, 1);
-	}
-}, 100);*/
 var popout = function(){
 	var delta = deltas.pop();
 	if(frames.length){
@@ -230,5 +156,8 @@ var popout = function(){
 	delete delta;
 }
 popout();
+
+console.log("server start at port 5900...");
+
 
 
